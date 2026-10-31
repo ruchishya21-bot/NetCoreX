@@ -1,0 +1,7 @@
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/netcorex.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/netcorex_tests.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/routing_tests.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/control_plane_tests.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/test.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/edit_cache.dir
+/home/ruchi/projects/NetCoreX/build/CMakeFiles/rebuild_cache.dir
