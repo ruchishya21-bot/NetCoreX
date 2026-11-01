@@ -12,7 +12,7 @@ int main() {
     int passed = 0;
     int failed = 0;
 
-    // Test 1: Valid TCP packet
+    // TEST 1: Valid TCP SYN packet
     std::vector<uint8_t> tcpPacket = {
         0x45, 0x00, 0x00, 0x2D,
         0x00, 0x01, 0x40, 0x00,
@@ -30,17 +30,18 @@ int main() {
     if (parser.parseIPv4Packet(tcpPacket, packet) &&
         packet.sourcePort == 5000 &&
         packet.destinationPort == 8080 &&
+        packet.tcpFlags == 0x02 &&
         packet.payload.size() == 5) {
 
-        std::cout << "[PASS] Valid TCP packet\n";
+        std::cout << "[PASS] Valid TCP SYN packet\n";
         passed++;
 
     } else {
-        std::cout << "[FAIL] Valid TCP packet\n";
+        std::cout << "[FAIL] Valid TCP SYN packet\n";
         failed++;
     }
 
-    // Test 2: Packet smaller than IPv4 header
+    // TEST 2: Packet smaller than IPv4 header
     std::vector<uint8_t> shortPacket = {
         0x45, 0x00, 0x00
     };
@@ -53,7 +54,7 @@ int main() {
         failed++;
     }
 
-    // Test 3: Invalid IP version
+    // TEST 3: Invalid IP version
     std::vector<uint8_t> invalidVersion = tcpPacket;
     invalidVersion[0] = 0x65;
 
@@ -65,7 +66,7 @@ int main() {
         failed++;
     }
 
-    // Test 4: Invalid total length
+    // TEST 4: Invalid total length
     std::vector<uint8_t> invalidLength = tcpPacket;
     invalidLength[2] = 0x00;
     invalidLength[3] = 0x10;
@@ -78,34 +79,34 @@ int main() {
         failed++;
     }
 
+    // TEST 5: Valid UDP packet
+    std::vector<uint8_t> udpPacket = {
+        0x45, 0x00, 0x00, 0x20,
+        0x00, 0x02, 0x40, 0x00,
+        0x40, 0x11, 0x00, 0x00,
+        0xC0, 0xA8, 0x01, 0x01,
+        0xC0, 0xA8, 0x01, 0x02,
 
-    // Test 5: Valid UDP packet
-std::vector<uint8_t> udpPacket = {
-    0x45, 0x00, 0x00, 0x20,
-    0x00, 0x02, 0x40, 0x00,
-    0x40, 0x11, 0x00, 0x00,
-    0xC0, 0xA8, 0x01, 0x01,
-    0xC0, 0xA8, 0x01, 0x02,
+        0x13, 0x88, 0x00, 0x35,
+        0x00, 0x0C, 0x00, 0x00,
 
-    0x13, 0x88, 0x00, 0x35,
-    0x00, 0x0C, 0x00, 0x00,
+        0x44, 0x41, 0x54, 0x41
+    };
 
-    0x44, 0x41, 0x54, 0x41
-};
+    if (parser.parseIPv4Packet(udpPacket, packet) &&
+        packet.protocol == 17 &&
+        packet.sourcePort == 5000 &&
+        packet.destinationPort == 53 &&
+        packet.tcpFlags == 0 &&
+        packet.payload.size() == 4) {
 
-if (parser.parseIPv4Packet(udpPacket, packet) &&
-    packet.protocol == 17 &&
-    packet.sourcePort == 5000 &&
-    packet.destinationPort == 53 &&
-    packet.payload.size() == 4) {
+        std::cout << "[PASS] Valid UDP packet\n";
+        passed++;
 
-    std::cout << "[PASS] Valid UDP packet\n";
-    passed++;
-
-} else {
-    std::cout << "[FAIL] Valid UDP packet\n";
-    failed++;
-}
+    } else {
+        std::cout << "[FAIL] Valid UDP packet\n";
+        failed++;
+    }
 
     std::cout << "\n========== TEST SUMMARY ==========\n";
     std::cout << "Passed: " << passed << "\n";

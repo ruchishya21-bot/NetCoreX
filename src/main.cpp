@@ -103,7 +103,10 @@ simulator.addRouter(r2);
 simulator.addRouter(r3);
 simulator.addRouter(r4);
 
-// Test 1: Forward through the lowest-cost path.
+// Keep an independent copy for the failover test.
+Packet failoverPacket = packet;
+
+// Test 1: Normal forwarding.
 std::cout << "\n========== TEST 1: NORMAL FORWARDING ==========\n";
 
 simulator.simulate(packet, r1);
@@ -117,7 +120,7 @@ controlPlane.removeLink("Router-2", "Router-4");
 controlPlane.installRoutes();
 
 // Forward the same packet again.
-simulator.simulate(packet, r1);
+simulator.simulate(failoverPacket, r1);
 
 return 0;
 

@@ -36,3 +36,15 @@ RouteTable& Router::getRoutingTable() {
 InterfaceManager& Router::getInterfaceManager() {
     return interfaceManager;
 }
+
+AccessControlList& Router::getAccessControlList() {
+    return accessControlList;
+}
+
+void Router::setAccessControlEnabled(bool enabled) {
+    accessControlEnabled = enabled;
+}
+
+bool Router::isAccessControlEnabled() const {
+    return accessControlEnabled;
+}
