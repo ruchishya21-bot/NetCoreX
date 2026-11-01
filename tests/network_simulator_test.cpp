@@ -20,6 +20,15 @@ struct TestNetwork {
         r1.addInterface("eth12", 0x0A000001);
         r1.addInterface("eth13", 0x0A000002);
 
+        r1.addInterface("ethLAN", 0xC0A80101);
+
+r1.addRoute(
+    0xC0A80100,
+    24,
+    0,
+    "ethLAN"
+);
+
         // Router-2 interfaces
         r2.addInterface("eth21", 0x0A000011);
         r2.addInterface("eth24", 0x0A000012);
@@ -260,19 +269,198 @@ void testAclDefaultDeny() {
 }
 
 
+// TEST 8: Stateful TCP handshake and established traffic.
+void testStatefulTcpConnection() {
+
+    TestNetwork network;
+
+    network.r1.setAccessControlEnabled(true);
+    network.r1.setStatefulFirewallEnabled(true);
+
+    ACLRule permitRule{
+        0xC0A80101, 32,
+        0xC0A80202, 32,
+        6,
+        ACLAction::Permit
+    };
+
+    network.r1.getAccessControlList().addRule(permitRule);
+
+    // Step 1: Initial SYN.
+    Packet syn = network.createPacket();
+
+    syn.protocol = 6;
+    syn.sourcePort = 50000;
+    syn.destinationPort = 443;
+    syn.tcpFlags = 0x02;
+
+    assert(
+        network.simulator.simulate(syn, network.r1)
+        == ForwardingResult::Delivered
+    );
+
+    // Step 2: SYN-ACK from responder.
+    Packet synAck = network.createPacket();
+
+    synAck.sourceIP = 0xC0A80202;
+    synAck.destinationIP = 0xC0A80101;
+    synAck.sourcePort = 443;
+    synAck.destinationPort = 50000;
+    synAck.protocol = 6;
+    synAck.tcpFlags = 0x12;
+
+    assert(
+        network.simulator.simulate(synAck, network.r1)
+        == ForwardingResult::Delivered
+    );
+
+    // Step 3: Final ACK.
+    Packet ack = network.createPacket();
+
+    ack.protocol = 6;
+    ack.sourcePort = 50000;
+    ack.destinationPort = 443;
+    ack.tcpFlags = 0x10;
+
+    assert(
+        network.simulator.simulate(ack, network.r1)
+        == ForwardingResult::Delivered
+    );
+
+    // Step 4: Reverse established traffic.
+    // The original ACL only permits the forward direction.
+    // Stateful tracking should permit this response.
+
+    Packet response = network.createPacket();
+
+    response.sourceIP = 0xC0A80202;
+    response.destinationIP = 0xC0A80101;
+    response.sourcePort = 443;
+    response.destinationPort = 50000;
+    response.protocol = 6;
+    response.tcpFlags = 0x10;
+
+    assert(
+        network.simulator.simulate(response, network.r1)
+        == ForwardingResult::Delivered
+    );
+
+    assert(
+        network.r1.getConnectionTracker().getConnectionCount() == 1
+    );
+
+    std::cout
+        << "PASS: Stateful TCP handshake and established traffic\n";
+}
+
+
+// TEST 9: Unknown TCP ACK is rejected.
+void testStatefulRejectsUnknownAck() {
+
+    TestNetwork network;
+
+    network.r1.setStatefulFirewallEnabled(true);
+
+    Packet packet = network.createPacket();
+
+    packet.protocol = 6;
+    packet.sourcePort = 50001;
+    packet.destinationPort = 443;
+    packet.tcpFlags = 0x10;
+
+    ForwardingResult result =
+        network.simulator.simulate(packet, network.r1);
+
+    assert(
+        result == ForwardingResult::StatefulFirewallDenied
+    );
+
+    assert(
+        network.r1.getConnectionTracker().getConnectionCount() == 0
+    );
+
+    std::cout
+        << "PASS: Stateful firewall rejects unknown TCP ACK\n";
+}
+
+
+// TEST 10: ACL rejects a new TCP connection.
+void testStatefulAclDeniesNewConnection() {
+
+    TestNetwork network;
+
+    network.r1.setAccessControlEnabled(true);
+    network.r1.setStatefulFirewallEnabled(true);
+
+    // No permit rule is installed.
+    // ACL default-deny should reject the initial SYN.
+
+    Packet packet = network.createPacket();
+
+    packet.protocol = 6;
+    packet.sourcePort = 50000;
+    packet.destinationPort = 443;
+    packet.tcpFlags = 0x02;
+
+    ForwardingResult result =
+        network.simulator.simulate(packet, network.r1);
+
+    assert(result == ForwardingResult::AclDenied);
+
+    // A denied connection must not be recorded.
+    assert(
+        network.r1.getConnectionTracker().getConnectionCount() == 0
+    );
+
+    std::cout
+        << "PASS: Stateful firewall applies ACL to new TCP connections\n";
+}
+
+
+// TEST 11: Stateful firewall permits UDP when ACL is disabled.
+void testStatefulUdpWithoutAcl() {
+
+    TestNetwork network;
+
+    network.r1.setStatefulFirewallEnabled(true);
+
+    Packet packet = network.createPacket();
+
+    packet.protocol = 17;
+    packet.sourcePort = 40000;
+    packet.destinationPort = 53;
+
+    ForwardingResult result =
+        network.simulator.simulate(packet, network.r1);
+
+    assert(result == ForwardingResult::Delivered);
+
+    std::cout
+        << "PASS: Stateful firewall preserves UDP forwarding without ACL\n";
+}
+
+
 int main() {
 
-    std::cout << "\n========== NETWORK SIMULATOR TESTS ==========\n";
+    std::cout
+        << "\n========== NETWORK SIMULATOR TESTS ==========\n";
 
     testSuccessfulForwarding();
     testTtlExpiration();
     testMissingRoute();
     testFailoverForwarding();
+
     testAclDeniesPacket();
     testAclPermitsPacket();
     testAclDefaultDeny();
 
-    std::cout << "\nALL NETWORK SIMULATOR TESTS PASSED\n";
+    testStatefulTcpConnection();
+    testStatefulRejectsUnknownAck();
+    testStatefulAclDeniesNewConnection();
+    testStatefulUdpWithoutAcl();
+
+    std::cout
+        << "\nALL NETWORK SIMULATOR TESTS PASSED\n";
 
     return 0;
 }

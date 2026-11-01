@@ -16,14 +16,17 @@ enum class ForwardingResult {
     NextHopUnreachable,
     RoutingLoop,
     HopLimitExceeded,
-    AclDenied
+    AclDenied,
+    StatefulFirewallDenied
 };
 
 class NetworkSimulator {
+
 private:
     std::vector<Router*> routers;
 
     IcmpHandler icmpHandler;
+
     std::optional<IcmpError> lastIcmpError;
 
 public:

@@ -67,6 +67,7 @@ add_executable(control_plane_tests
     src/network/router.cpp
     src/network/network_interface.cpp
     src/network/access_control_list.cpp
+    src/connection/connection_tracker.cpp
 )
 
 target_include_directories(control_plane_tests PRIVATE include)
@@ -88,6 +89,7 @@ add_executable(network_simulator_tests
     src/routing/link_state_routing.cpp
     src/packet/icmp_handler.cpp
     src/forwarding/forwarding_decision.cpp
+    src/connection/connection_tracker.cpp
 )
 
 target_include_directories(network_simulator_tests PRIVATE include)

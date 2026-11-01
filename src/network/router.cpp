@@ -8,7 +8,10 @@ void Router::addInterface(
     const std::string& interfaceName,
     uint32_t ipAddress
 ) {
-    interfaceManager.addInterface(interfaceName, ipAddress);
+    interfaceManager.addInterface(
+        interfaceName,
+        ipAddress
+    );
 }
 
 void Router::addRoute(
@@ -41,10 +44,22 @@ AccessControlList& Router::getAccessControlList() {
     return accessControlList;
 }
 
+ConnectionTracker& Router::getConnectionTracker() {
+    return connectionTracker;
+}
+
 void Router::setAccessControlEnabled(bool enabled) {
     accessControlEnabled = enabled;
 }
 
 bool Router::isAccessControlEnabled() const {
     return accessControlEnabled;
+}
+
+void Router::setStatefulFirewallEnabled(bool enabled) {
+    statefulFirewallEnabled = enabled;
+}
+
+bool Router::isStatefulFirewallEnabled() const {
+    return statefulFirewallEnabled;
 }
