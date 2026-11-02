@@ -26,6 +26,10 @@ add_executable(netcorex
     src/nat/nat_table.cpp
     src/nat/nat_engine.cpp
     src/network/arp_engine.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+src/network/arp_cache.cpp
+
 )
 
 target_include_directories(netcorex PRIVATE include)
@@ -193,4 +197,18 @@ target_include_directories(arp_engine_tests PRIVATE include)
 add_test(
     NAME ArpEngineTests
     COMMAND arp_engine_tests
+)
+
+# Ethernet Frame Tests
+add_executable(ethernet_frame_tests
+    tests/ethernet_frame_test.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+)
+
+target_include_directories(ethernet_frame_tests PRIVATE include)
+
+add_test(
+    NAME EthernetFrameTests
+    COMMAND ethernet_frame_tests
 )
