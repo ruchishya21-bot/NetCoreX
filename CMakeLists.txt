@@ -25,6 +25,7 @@ add_executable(netcorex
     src/connection/connection_tracker.cpp
     src/nat/nat_table.cpp
     src/nat/nat_engine.cpp
+    src/network/arp_engine.cpp
 )
 
 target_include_directories(netcorex PRIVATE include)
@@ -176,4 +177,20 @@ target_include_directories(arp_cache_tests PRIVATE include)
 add_test(
     NAME ArpCacheTests
     COMMAND arp_cache_tests
+)
+
+
+# ARP Protocol Engine Tests
+add_executable(arp_engine_tests
+    tests/arp_engine_test.cpp
+    src/network/arp_engine.cpp
+    src/network/arp_cache.cpp
+    src/network/mac_address.cpp
+)
+
+target_include_directories(arp_engine_tests PRIVATE include)
+
+add_test(
+    NAME ArpEngineTests
+    COMMAND arp_engine_tests
 )
