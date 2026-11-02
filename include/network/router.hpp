@@ -3,10 +3,13 @@
 
 #include <string>
 #include <optional>
+#include <unordered_map>
+#include <memory>
 
 #include "routing/route_table.hpp"
 #include "network/network_interface.hpp"
 #include "network/access_control_list.hpp"
+#include "network/arp_engine.hpp"
 #include "connection/connection_tracker.hpp"
 #include "nat/nat_engine.hpp"
 
@@ -21,6 +24,10 @@ private:
     AccessControlList accessControlList;
     ConnectionTracker connectionTracker;
 
+    // One ARP engine per network interface.
+    std::unordered_map<std::string, std::unique_ptr<ArpEngine>>
+        arpEngines;
+
     std::optional<NatEngine> natEngine;
 
     bool accessControlEnabled{false};
@@ -32,6 +39,12 @@ public:
     void addInterface(
         const std::string& name,
         uint32_t ipAddress
+    );
+
+    void addInterface(
+        const std::string& name,
+        uint32_t ipAddress,
+        const MacAddress& macAddress
     );
 
     void addRoute(
@@ -50,6 +63,20 @@ public:
     AccessControlList& getAccessControlList();
 
     ConnectionTracker& getConnectionTracker();
+
+    // ARP access.
+    ArpEngine* getArpEngine(
+        const std::string& interfaceName
+    );
+
+    const ArpEngine* getArpEngine(
+        const std::string& interfaceName
+    ) const;
+
+    std::optional<MacAddress> resolveNeighbor(
+        const std::string& interfaceName,
+        uint32_t ipAddress
+    );
 
     void setAccessControlEnabled(bool enabled);
 

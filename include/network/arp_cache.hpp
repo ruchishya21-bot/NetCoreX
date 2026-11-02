@@ -63,6 +63,11 @@ public:
     void clear();
 
     size_t getEntryCount() const;
+
+    // Read-only access to cached ARP entries.
+    const std::unordered_map<uint32_t, ArpEntry>& getEntries() const {
+        return entries;
+    }
 };
 
 #endif

@@ -19,6 +19,7 @@ add_executable(netcorex
     src/forwarding/forwarding_engine.cpp
     src/network/router.cpp
     src/network/network_simulator.cpp
+    src/packet/ipv4_codec.cpp
     src/routing/control_plane.cpp
     src/forwarding/forwarding_decision.cpp
     src/network/access_control_list.cpp
@@ -70,20 +71,20 @@ add_executable(control_plane_tests
     src/connection/connection_tracker.cpp
     src/nat/nat_engine.cpp
     src/nat/nat_table.cpp
+    src/network/mac_address.cpp
+    src/network/arp_engine.cpp
+src/network/arp_cache.cpp
+src/network/mac_address.cpp
 )
 
-
-
 target_include_directories(control_plane_tests PRIVATE include)
-add_test(
-    NAME ControlPlaneTests
-     COMMAND control_plane_tests
-     )
+add_test(NAME ControlPlaneTests COMMAND control_plane_tests)
 
 # Network Simulator end-to-end tests
 add_executable(network_simulator_tests
     tests/network_simulator_test.cpp
     src/network/network_simulator.cpp
+    src/packet/ipv4_codec.cpp
     src/network/router.cpp
     src/network/network_interface.cpp
     src/network/access_control_list.cpp
@@ -94,8 +95,45 @@ add_executable(network_simulator_tests
     src/forwarding/forwarding_decision.cpp
     src/connection/connection_tracker.cpp
     src/nat/nat_engine.cpp
-src/nat/nat_table.cpp
+    src/nat/nat_table.cpp
+    src/network/lan_segment.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+       src/network/arp_engine.cpp
+src/network/arp_cache.cpp
+
+src/packet/packet_parser.cpp
 )
+
+
+
+add_executable(ethernet_link_tests
+    tests/ethernet_link_test.cpp
+    src/network/network_simulator.cpp
+    src/packet/ipv4_codec.cpp
+    src/network/router.cpp
+    src/network/network_interface.cpp
+    src/network/access_control_list.cpp
+    src/routing/route_table.cpp
+    src/routing/control_plane.cpp
+    src/routing/link_state_routing.cpp
+    src/packet/icmp_handler.cpp
+    src/forwarding/forwarding_decision.cpp
+    src/connection/connection_tracker.cpp
+    src/nat/nat_engine.cpp
+    src/nat/nat_table.cpp
+    src/network/lan_segment.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+    src/network/arp_engine.cpp
+src/network/arp_cache.cpp
+
+src/packet/packet_parser.cpp
+)
+
+target_include_directories(ethernet_link_tests PRIVATE include)
+
+add_test(NAME ethernet_link_tests COMMAND ethernet_link_tests)
 
 target_include_directories(network_simulator_tests PRIVATE include)
 add_test(NAME NetworkSimulatorTests COMMAND network_simulator_tests)
@@ -106,6 +144,7 @@ add_executable(forwarding_decision_tests
     src/forwarding/forwarding_decision.cpp
     src/routing/route_table.cpp
     src/network/network_interface.cpp
+    src/network/mac_address.cpp
 )
 
 target_include_directories(forwarding_decision_tests PRIVATE include)
@@ -152,6 +191,7 @@ add_test(NAME NatEngineTests COMMAND nat_engine_tests)
 add_executable(nat_integration_tests
     tests/nat_integration_test.cpp
     src/network/network_simulator.cpp
+    src/packet/ipv4_codec.cpp
     src/network/router.cpp
     src/network/network_interface.cpp
     src/network/access_control_list.cpp
@@ -161,6 +201,13 @@ add_executable(nat_integration_tests
     src/packet/icmp_handler.cpp
     src/nat/nat_engine.cpp
     src/nat/nat_table.cpp
+    src/network/lan_segment.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+    src/network/arp_engine.cpp
+src/network/arp_cache.cpp
+
+src/packet/packet_parser.cpp
 )
 
 target_include_directories(nat_integration_tests PRIVATE include)
@@ -183,7 +230,6 @@ add_test(
     NAME ArpCacheTests
     COMMAND arp_cache_tests
 )
-
 
 # ARP Protocol Engine Tests
 add_executable(arp_engine_tests
@@ -245,4 +291,18 @@ target_include_directories(arp_network_tests PRIVATE include)
 add_test(
     NAME ArpNetworkTests
     COMMAND arp_network_tests
+)
+
+# Network Interface Tests
+add_executable(network_interface_tests
+    tests/network_interface_test.cpp
+    src/network/network_interface.cpp
+    src/network/mac_address.cpp
+)
+
+target_include_directories(network_interface_tests PRIVATE include)
+
+add_test(
+    NAME NetworkInterfaceTests
+    COMMAND network_interface_tests
 )

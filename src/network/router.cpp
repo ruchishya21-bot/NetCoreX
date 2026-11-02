@@ -8,10 +8,41 @@ void Router::addInterface(
     const std::string& interfaceName,
     uint32_t ipAddress
 ) {
+    interfaceManager.addInterface(interfaceName, ipAddress);
+
+    auto* interface =
+        interfaceManager.findInterface(interfaceName);
+
+    if (interface != nullptr) {
+        arpEngines[interfaceName] =
+            std::make_unique<ArpEngine>(
+                ipAddress,
+                interface->macAddress
+            );
+    }
+}
+
+void Router::addInterface(
+    const std::string& interfaceName,
+    uint32_t ipAddress,
+    const MacAddress& macAddress
+) {
     interfaceManager.addInterface(
         interfaceName,
-        ipAddress
+        ipAddress,
+        macAddress
     );
+
+    auto* interface =
+        interfaceManager.findInterface(interfaceName);
+
+    if (interface != nullptr) {
+        arpEngines[interfaceName] =
+            std::make_unique<ArpEngine>(
+                ipAddress,
+                interface->macAddress
+            );
+    }
 }
 
 void Router::addRoute(
@@ -48,6 +79,43 @@ ConnectionTracker& Router::getConnectionTracker() {
     return connectionTracker;
 }
 
+ArpEngine* Router::getArpEngine(
+    const std::string& interfaceName
+) {
+    auto it = arpEngines.find(interfaceName);
+
+    if (it == arpEngines.end()) {
+        return nullptr;
+    }
+
+    return it->second.get();
+}
+
+const ArpEngine* Router::getArpEngine(
+    const std::string& interfaceName
+) const {
+    auto it = arpEngines.find(interfaceName);
+
+    if (it == arpEngines.end()) {
+        return nullptr;
+    }
+
+    return it->second.get();
+}
+
+std::optional<MacAddress> Router::resolveNeighbor(
+    const std::string& interfaceName,
+    uint32_t ipAddress
+) {
+    ArpEngine* engine = getArpEngine(interfaceName);
+
+    if (engine == nullptr) {
+        return std::nullopt;
+    }
+
+    return engine->resolve(ipAddress);
+}
+
 void Router::setAccessControlEnabled(bool enabled) {
     accessControlEnabled = enabled;
 }
@@ -73,17 +141,9 @@ bool Router::isNatEnabled() const {
 }
 
 NatEngine* Router::getNatEngine() {
-    if (!natEngine.has_value()) {
-        return nullptr;
-    }
-
-    return &natEngine.value();
+    return natEngine ? &(*natEngine) : nullptr;
 }
 
 const NatEngine* Router::getNatEngine() const {
-    if (!natEngine.has_value()) {
-        return nullptr;
-    }
-
-    return &natEngine.value();
+    return natEngine ? &(*natEngine) : nullptr;
 }

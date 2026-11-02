@@ -36,6 +36,11 @@ public:
     void clearDynamicRoutes();
 
     const Route* findRoute(uint32_t destinationIP) const;
+
+    // Read-only access to all routing entries.
+    const std::vector<Route>& getRoutes() const {
+        return routes;
+    }
 };
 
 #endif

@@ -19,15 +19,14 @@ struct TestNetwork {
         // Router-1 interfaces
         r1.addInterface("eth12", 0x0A000001);
         r1.addInterface("eth13", 0x0A000002);
-
         r1.addInterface("ethLAN", 0xC0A80101);
 
-r1.addRoute(
-    0xC0A80100,
-    24,
-    0,
-    "ethLAN"
-);
+        r1.addRoute(
+            0xC0A80100,
+            24,
+            0,
+            "ethLAN"
+        );
 
         // Router-2 interfaces
         r2.addInterface("eth21", 0x0A000011);
@@ -80,11 +79,30 @@ r1.addRoute(
 
         controlPlane.installRoutes();
 
-        // Add routers to simulator
+        // Register routers with simulator
         simulator.addRouter(r1);
         simulator.addRouter(r2);
         simulator.addRouter(r3);
         simulator.addRouter(r4);
+
+        // Establish simulated Ethernet connections
+        assert(simulator.connectInterfaces(
+            r1, "eth12", r2, "eth21"
+        ));
+
+        assert(simulator.connectInterfaces(
+            r1, "eth13", r3, "eth31"
+        ));
+
+        assert(simulator.connectInterfaces(
+            r2, "eth24", r4, "eth42"
+        ));
+
+        assert(simulator.connectInterfaces(
+            r3, "eth34", r4, "eth43"
+        ));
+
+        assert(simulator.getLinkCount() == 4);
     }
 
     Packet createPacket(uint8_t ttl = 64) {
@@ -111,12 +129,39 @@ void testSuccessfulForwarding() {
     ForwardingResult result =
         network.simulator.simulate(packet, network.r1);
 
+    // Verify successful delivery.
     assert(result == ForwardingResult::Delivered);
+
+    // Two routers forwarded the packet.
     assert(packet.ttl == 61);
 
-    std::cout << "PASS: Successful packet forwarding\n";
-}
+    // Verify Router-1 resolved Router-2's MAC address.
+    ArpEngine* r1Arp =
+    network.r1.getArpEngine("eth12");
 
+    assert(r1Arp != nullptr);
+
+    assert(
+        r1Arp->getArpCache()
+            .lookup(0x0A000011)
+            .has_value()
+    );
+
+    // Verify Router-2 resolved Router-4's MAC address.
+    ArpEngine* r2Arp =
+    network.r2.getArpEngine("eth24");
+
+    assert(r2Arp != nullptr);
+
+    assert(
+        r2Arp->getArpCache()
+            .lookup(0x0A000031)
+            .has_value()
+    );
+
+    std::cout
+        << "PASS: IPv4 forwarding with Ethernet and ARP resolution\n";
+}
 
 // TEST 2: TTL expiration
 void testTtlExpiration() {
@@ -170,18 +215,17 @@ void testMissingRoute() {
     std::cout << "PASS: Missing route and ICMP error generation\n";
 }
 
+
 // TEST 4: Primary link failure and alternate path
 void testFailoverForwarding() {
 
     TestNetwork network;
 
-    // Remove primary link
     network.controlPlane.removeLink(
         "Router-2",
         "Router-4"
     );
 
-    // Recalculate and install routes
     network.controlPlane.installRoutes();
 
     Packet packet = network.createPacket();
@@ -195,15 +239,16 @@ void testFailoverForwarding() {
     std::cout << "PASS: Alternate path forwarding after link failure\n";
 }
 
+
 // TEST 5: ACL denies a packet
 void testAclDeniesPacket() {
 
     TestNetwork network;
 
     ACLRule denyRule{
-        0xC0A80101, 32,  // Source: 192.168.1.1
-        0xC0A80202, 32,  // Destination: 192.168.2.2
-        0,               // Any protocol
+        0xC0A80101, 32,
+        0xC0A80202, 32,
+        0,
         ACLAction::Deny
     };
 
@@ -254,7 +299,6 @@ void testAclDefaultDeny() {
 
     TestNetwork network;
 
-    // Enable ACL without adding any rules.
     network.r1.setAccessControlEnabled(true);
 
     Packet packet = network.createPacket();
@@ -269,7 +313,7 @@ void testAclDefaultDeny() {
 }
 
 
-// TEST 8: Stateful TCP handshake and established traffic.
+// TEST 8: Stateful TCP handshake
 void testStatefulTcpConnection() {
 
     TestNetwork network;
@@ -286,7 +330,6 @@ void testStatefulTcpConnection() {
 
     network.r1.getAccessControlList().addRule(permitRule);
 
-    // Step 1: Initial SYN.
     Packet syn = network.createPacket();
 
     syn.protocol = 6;
@@ -299,7 +342,6 @@ void testStatefulTcpConnection() {
         == ForwardingResult::Delivered
     );
 
-    // Step 2: SYN-ACK from responder.
     Packet synAck = network.createPacket();
 
     synAck.sourceIP = 0xC0A80202;
@@ -314,7 +356,6 @@ void testStatefulTcpConnection() {
         == ForwardingResult::Delivered
     );
 
-    // Step 3: Final ACK.
     Packet ack = network.createPacket();
 
     ack.protocol = 6;
@@ -326,10 +367,6 @@ void testStatefulTcpConnection() {
         network.simulator.simulate(ack, network.r1)
         == ForwardingResult::Delivered
     );
-
-    // Step 4: Reverse established traffic.
-    // The original ACL only permits the forward direction.
-    // Stateful tracking should permit this response.
 
     Packet response = network.createPacket();
 
@@ -354,7 +391,7 @@ void testStatefulTcpConnection() {
 }
 
 
-// TEST 9: Unknown TCP ACK is rejected.
+// TEST 9: Unknown TCP ACK is rejected
 void testStatefulRejectsUnknownAck() {
 
     TestNetwork network;
@@ -371,9 +408,7 @@ void testStatefulRejectsUnknownAck() {
     ForwardingResult result =
         network.simulator.simulate(packet, network.r1);
 
-    assert(
-        result == ForwardingResult::StatefulFirewallDenied
-    );
+    assert(result == ForwardingResult::StatefulFirewallDenied);
 
     assert(
         network.r1.getConnectionTracker().getConnectionCount() == 0
@@ -384,16 +419,13 @@ void testStatefulRejectsUnknownAck() {
 }
 
 
-// TEST 10: ACL rejects a new TCP connection.
+// TEST 10: ACL rejects a new TCP connection
 void testStatefulAclDeniesNewConnection() {
 
     TestNetwork network;
 
     network.r1.setAccessControlEnabled(true);
     network.r1.setStatefulFirewallEnabled(true);
-
-    // No permit rule is installed.
-    // ACL default-deny should reject the initial SYN.
 
     Packet packet = network.createPacket();
 
@@ -407,7 +439,6 @@ void testStatefulAclDeniesNewConnection() {
 
     assert(result == ForwardingResult::AclDenied);
 
-    // A denied connection must not be recorded.
     assert(
         network.r1.getConnectionTracker().getConnectionCount() == 0
     );
@@ -417,7 +448,7 @@ void testStatefulAclDeniesNewConnection() {
 }
 
 
-// TEST 11: Stateful firewall permits UDP when ACL is disabled.
+// TEST 11: Stateful firewall permits UDP
 void testStatefulUdpWithoutAcl() {
 
     TestNetwork network;
