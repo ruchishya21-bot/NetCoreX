@@ -163,3 +163,17 @@ add_test(
     NAME NatIntegrationTests
     COMMAND nat_integration_tests
 )
+
+# ARP Cache Tests
+add_executable(arp_cache_tests
+    tests/arp_cache_test.cpp
+    src/network/mac_address.cpp
+    src/network/arp_cache.cpp
+)
+
+target_include_directories(arp_cache_tests PRIVATE include)
+
+add_test(
+    NAME ArpCacheTests
+    COMMAND arp_cache_tests
+)
