@@ -2,11 +2,13 @@
 #define ROUTER_HPP
 
 #include <string>
+#include <optional>
 
 #include "routing/route_table.hpp"
 #include "network/network_interface.hpp"
 #include "network/access_control_list.hpp"
 #include "connection/connection_tracker.hpp"
+#include "nat/nat_engine.hpp"
 
 class Router {
 
@@ -18,6 +20,8 @@ private:
 
     AccessControlList accessControlList;
     ConnectionTracker connectionTracker;
+
+    std::optional<NatEngine> natEngine;
 
     bool accessControlEnabled{false};
     bool statefulFirewallEnabled{false};
@@ -54,6 +58,14 @@ public:
     void setStatefulFirewallEnabled(bool enabled);
 
     bool isStatefulFirewallEnabled() const;
+
+    void configureNat(uint32_t publicIP);
+
+    bool isNatEnabled() const;
+
+    NatEngine* getNatEngine();
+
+    const NatEngine* getNatEngine() const;
 };
 
 #endif

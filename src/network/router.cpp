@@ -63,3 +63,27 @@ void Router::setStatefulFirewallEnabled(bool enabled) {
 bool Router::isStatefulFirewallEnabled() const {
     return statefulFirewallEnabled;
 }
+
+void Router::configureNat(uint32_t publicIP) {
+    natEngine.emplace(publicIP);
+}
+
+bool Router::isNatEnabled() const {
+    return natEngine.has_value();
+}
+
+NatEngine* Router::getNatEngine() {
+    if (!natEngine.has_value()) {
+        return nullptr;
+    }
+
+    return &natEngine.value();
+}
+
+const NatEngine* Router::getNatEngine() const {
+    if (!natEngine.has_value()) {
+        return nullptr;
+    }
+
+    return &natEngine.value();
+}

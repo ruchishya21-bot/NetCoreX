@@ -17,7 +17,8 @@ enum class ForwardingResult {
     RoutingLoop,
     HopLimitExceeded,
     AclDenied,
-    StatefulFirewallDenied
+    StatefulFirewallDenied,
+    NatTranslationFailed
 };
 
 class NetworkSimulator {

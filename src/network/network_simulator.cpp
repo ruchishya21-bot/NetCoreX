@@ -21,6 +21,10 @@ bool isInitialTcpSyn(const Packet& packet) {
     return syn && !ack && !fin && !rst;
 }
 
+bool isNatSupportedProtocol(const Packet& packet) {
+    return packet.protocol == 6 || packet.protocol == 17;
+}
+
 }
 
 void NetworkSimulator::addRouter(Router& router) {
@@ -44,6 +48,9 @@ ForwardingResult NetworkSimulator::simulate(
 
     int hops = 0;
 
+    bool inboundNatProcessed = false;
+    bool outboundNatProcessed = false;
+
     std::cout << "\n========== PACKET FORWARDING ==========\n";
 
     std::cout << "Starting router: "
@@ -51,6 +58,37 @@ ForwardingResult NetworkSimulator::simulate(
 
     std::cout << "Initial TTL: "
               << static_cast<int>(packet.ttl) << "\n";
+
+    // ==========================================
+    // INBOUND DESTINATION NAT
+    // ==========================================
+
+    if (sourceRouter.isNatEnabled()) {
+
+        NatEngine* nat =
+            sourceRouter.getNatEngine();
+
+        if (
+            nat != nullptr &&
+            packet.destinationIP == nat->getPublicIP() &&
+            isNatSupportedProtocol(packet)
+        ) {
+
+            std::cout << "NAT: Processing inbound packet.\n";
+
+            if (!nat->translateInbound(packet)) {
+
+                std::cout
+                    << "NAT DROP: No matching inbound translation.\n";
+
+                return ForwardingResult::NatTranslationFailed;
+            }
+
+            inboundNatProcessed = true;
+
+            std::cout << "NAT: Inbound destination translated.\n";
+        }
+    }
 
     while (hops < MAX_HOPS) {
 
@@ -83,9 +121,6 @@ ForwardingResult NetworkSimulator::simulate(
 
                 if (connectionExists) {
 
-                    // Existing connection:
-                    // Validate and update its TCP state.
-
                     ConnectionUpdateResult update =
                         tracker.processPacket(packet);
 
@@ -113,9 +148,6 @@ ForwardingResult NetworkSimulator::simulate(
 
                 else {
 
-                    // An unknown TCP packet must begin with
-                    // a valid initial SYN.
-
                     if (!isInitialTcpSyn(packet)) {
 
                         std::cout
@@ -123,9 +155,6 @@ ForwardingResult NetworkSimulator::simulate(
 
                         return ForwardingResult::StatefulFirewallDenied;
                     }
-
-                    // Apply ACL rules to new connections
-                    // when ACL is enabled.
 
                     if (currentRouter->isAccessControlEnabled()) {
 
@@ -143,8 +172,6 @@ ForwardingResult NetworkSimulator::simulate(
                             return ForwardingResult::AclDenied;
                         }
                     }
-
-                    // Create a new tracked TCP connection.
 
                     ConnectionUpdateResult update =
                         tracker.processPacket(packet);
@@ -168,9 +195,6 @@ ForwardingResult NetworkSimulator::simulate(
             }
 
             else {
-
-                // Non-TCP traffic continues to use
-                // the existing ACL mechanism.
 
                 if (currentRouter->isAccessControlEnabled()) {
 
@@ -212,6 +236,43 @@ ForwardingResult NetworkSimulator::simulate(
 
                 return ForwardingResult::AclDenied;
             }
+        }
+
+        // ==========================================
+        // OUTBOUND SOURCE NAT
+        // ==========================================
+
+        if (
+            currentRouter == &sourceRouter &&
+            !outboundNatProcessed &&
+            !inboundNatProcessed &&
+            currentRouter->isNatEnabled() &&
+            isNatSupportedProtocol(packet)
+        ) {
+
+            NatEngine* nat =
+                currentRouter->getNatEngine();
+
+            if (
+                nat != nullptr &&
+                packet.sourceIP != nat->getPublicIP()
+            ) {
+
+                std::cout << "NAT: Processing outbound packet.\n";
+
+                if (!nat->translateOutbound(packet)) {
+
+                    std::cout
+                        << "NAT DROP: Outbound translation failed.\n";
+
+                    return ForwardingResult::NatTranslationFailed;
+                }
+
+                std::cout
+                    << "NAT: Outbound source translated successfully.\n";
+            }
+
+            outboundNatProcessed = true;
         }
 
         // ==========================================
