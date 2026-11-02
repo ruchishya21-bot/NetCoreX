@@ -30,7 +30,7 @@ add_executable(netcorex
     src/network/mac_address.cpp
     src/network/arp_cache.cpp
     src/network/lan_segment.cpp
-
+    src/network/arp_network.cpp
 )
 
 target_include_directories(netcorex PRIVATE include)
@@ -227,4 +227,22 @@ target_include_directories(lan_segment_tests PRIVATE include)
 add_test(
     NAME LanSegmentTests
     COMMAND lan_segment_tests
+)
+
+# ARP and Ethernet Integration Tests
+add_executable(arp_network_tests
+    tests/arp_network_test.cpp
+    src/network/arp_network.cpp
+    src/network/arp_engine.cpp
+    src/network/arp_cache.cpp
+    src/network/lan_segment.cpp
+    src/network/ethernet_frame.cpp
+    src/network/mac_address.cpp
+)
+
+target_include_directories(arp_network_tests PRIVATE include)
+
+add_test(
+    NAME ArpNetworkTests
+    COMMAND arp_network_tests
 )
